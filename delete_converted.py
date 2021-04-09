@@ -12,7 +12,8 @@ def delete_files(folder, days=50):
     get files modified more that `days` ago
     delete them and log to file
     """
-
+    parent_folder = str(folder.parent).strip(os.sep)
+    base_folder = os.path.basename(parent_folder)
     count = 0
     for file in folder.glob("*"):
         if not file.is_dir():
@@ -21,9 +22,9 @@ def delete_files(folder, days=50):
             if datetime.now() - file_modified > timedelta(days):
                 count += 1
                 file.unlink()
-                logger.info(f"deleted {file.name} created at {file_date}")
-    if count == 0:
-        logger.info("no old files found in {}".format(folder))
+                logger.info(
+                    f"deleted {file.name} created at {file_date} in {base_folder}"
+                )
     fh.close()
 
 
@@ -43,3 +44,5 @@ if __name__ == "__main__":
     for folder in FOLDERS:
         folder = Path(folder)
         delete_files(folder)
+
+    print("Done!")
