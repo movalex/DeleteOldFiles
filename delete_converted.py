@@ -12,6 +12,7 @@ def delete_files(folder, days=50):
     get files modified more that `days` ago
     delete them and log to file
     """
+    folder = Path(folder)
     parent_folder = str(folder.parent).strip(os.sep)
     base_folder = os.path.basename(parent_folder)
     count = 0
@@ -23,7 +24,7 @@ def delete_files(folder, days=50):
                 count += 1
                 file.unlink()
                 logger.info(
-                    f"deleted {file.name} created at {file_date} in {base_folder}"
+                    f"deleted {file.name} from {base_folder}"
                 )
     fh.close()
 
@@ -42,7 +43,6 @@ if __name__ == "__main__":
     logger.addHandler(fh)
 
     for folder in FOLDERS:
-        folder = Path(folder)
         delete_files(folder)
 
     print("Done!")
