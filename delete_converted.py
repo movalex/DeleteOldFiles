@@ -32,6 +32,7 @@ def delete_files(logger, folder, days=90):
                 except Exception as e:
                     logger.info(f"Could not delete file! Error message:\n{e}")
 
+
 def setup_logger():
     logger_folder = Path(r"\\Capture2\shared\logs")
     logger_folder.mkdir(parents=True, exist_ok=True)
@@ -45,7 +46,6 @@ def setup_logger():
     logger.addHandler(fh)
     fh.close()
     return logger
-        
 
 
 if __name__ == "__main__":
