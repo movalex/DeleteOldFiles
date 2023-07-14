@@ -43,6 +43,7 @@ def setup_logger():
     )
     fh.setFormatter(formatter)
     logger.addHandler(fh)
+    fh.close()
     return logger
         
 
@@ -51,6 +52,5 @@ if __name__ == "__main__":
     logger = setup_logger()
     for folder in FOLDERS:
         delete_files(logger, folder)
-    fh.close()
 
     print("Done!")
