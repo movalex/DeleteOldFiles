@@ -3,11 +3,15 @@ from datetime import datetime, timedelta
 import os
 import logging
 
-FOLDERS = ["//Capture2/convert/processed", "//CAPTURE2/CONVERT_fast/processed"]
+FOLDERS = [
+    "//Capture2/convert/processed",
+    "//CAPTURE2/CONVERT_fast/processed",
+    "//CAPTURE2/Capture2/SHARED/MP4",
+]
 # FOLDER = "."
 
 
-def delete_files(folder, days=50):
+def delete_files(logger, folder, days=90):
     """
     get files modified more that `days` ago
     delete them and log to file
@@ -22,27 +26,31 @@ def delete_files(folder, days=50):
             file_date = file_modified.strftime("%H:%M %d-%b-%Y")
             if datetime.now() - file_modified > timedelta(days):
                 count += 1
-                file.unlink()
-                logger.info(
-                    f"deleted {file.name} from {base_folder}"
-                )
-    fh.close()
+                try:
+                    file.unlink()
+                    logger.info(f"deleted {file.name} from {base_folder}")
+                except Exception as e:
+                    logger.info(f"Could not delete file! Error message:\n{e}")
 
-
-if __name__ == "__main__":
-    # setup logger
-    logger_folder = Path(FOLDERS[0]) / "log"
+def setup_logger():
+    logger_folder = Path(r"\\Capture2\shared\logs")
     logger_folder.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger("fileDeleter")
     logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(Path(logger_folder, "logfile.log"), "a", "utf-8")
+    fh = logging.FileHandler(Path(logger_folder, "delete_converted.log"), "a", "utf-8")
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(message)s", "%Y-%m-%d %H:%M:%S"
     )
     fh.setFormatter(formatter)
     logger.addHandler(fh)
+    return logger
+        
 
+
+if __name__ == "__main__":
+    logger = setup_logger()
     for folder in FOLDERS:
-        delete_files(folder)
+        delete_files(logger, folder)
+    fh.close()
 
     print("Done!")
