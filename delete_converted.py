@@ -6,13 +6,13 @@ FOLDERS = [
     "//Capture2/convert/processed",
     "//CAPTURE2/CONVERT_fast/processed",
     "//CAPTURE2/shared/MP4",
-    "//Capture2/shared/NAEFIR/processed",
+    # "//Capture2/shared/NAEFIR/processed",
 ]
 
-LOG_FILE = "//Capture2/shared/logs/delete_converted.log"
+LOG_FILE = "//Capture2/shared/logs/delete_converted_test.log"
 
 
-def setup_logger(name, log_file, level=logging.ERROR):
+def setup_logger(name, log_file, level=logging.INFO):
     """
     Function to set up a logger with the given name, log file, and logging level.
     """
@@ -46,7 +46,7 @@ def format_size(size_bytes):
         return f"{size_gb:.2f} GB"
 
 
-def delete_files(folder, days=90):
+def delete_files(folder, days=80):
     """
     Get files modified more than `days` ago,
     delete and log to file.
@@ -54,39 +54,76 @@ def delete_files(folder, days=90):
     folder = Path(folder)
     count = 0
     total_size_purged = 0
+    deleted_files = []
+    errors = []
 
     if not folder.is_dir():
-        logger.error(f"The folder {folder} does not exist or is not a directory.")
-        return
+        error_message = f"The folder {folder} does not exist or is not a directory."
+        return {"error": error_message}
 
     for file in folder.glob("*"):
         if file.is_dir():
             continue
         file_modified = datetime.fromtimestamp(file.lstat().st_mtime)
         if datetime.now() - file_modified > timedelta(days=days):
-            count += 1
             try:
                 file_size = file.stat().st_size
-                file_size_formatted = format_size(file_size)
                 total_size_purged += file_size
-                # file.unlink()
-                print(f"Deleted {file.name} from {folder}, {file_size_formatted}")
-                logger.info(f"Deleted {file.name} from {folder}, {file_size} bytes")
+                # file.unlink()  # delete diles
+                deleted_files.append((file.name, file_size))
+                count += 1
             except Exception as e:
-                logger.error(f"Could not delete file {file.name}! Error message:\n{e}")
+                error_message = (
+                    f"Could not delete file {file.name}! Error message:\n{e}"
+                )
+                errors.append(error_message)
 
-    if count == 0:
-        logger.debug("No files to delete")
-        return
+    return {
+        "count": count,
+        "folder_name": folder,
+        "total_size_purged": total_size_purged,
+        "deleted_files": deleted_files,
+        "errors": errors,
+    }
 
-    formatted_total_size = format_size(total_size_purged)
-    logger.info(f"Total number of files deleted in {folder.name}: {count}")
-    logger.info(f"Total size of files deleted in {folder.name}: {formatted_total_size}")
+
+def log_deletion_summary(summary, logger):
+    """
+    Log the summary of the file deletion operation.
+    """
+
+    if "error" in summary:
+        logger.error(f"Critical error encountered: {summary['error']}")
+        return 0
+
+    current_folder = summary["folder_name"]
+    for file_name, file_size in summary["deleted_files"]:
+        logger.info(f"Deleted {file_name}, size: {format_size(file_size)}")
+
+    logger.info(
+        f"Total number of files deleted from {current_folder}: {summary['count']}"
+    )
+
+    if summary["errors"]:
+        logger.error(f"Total files not deleted: {len(summary['errors'])}")
+        if logger.getEffectiveLevel() == "INFO":
+            logger.error("Use DEBUG level to list files not processed")
+        for error in summary["errors"]:
+            logger.debug(error)
+    return summary["total_size_purged"]
 
 
 if __name__ == "__main__":
     logger = setup_logger("fileDeleter", LOG_FILE)
+    total_replaimed_space = 0
+
     for folder in FOLDERS:
-        delete_files(folder)
+        summary = delete_files(folder)
+        logger.info(f"Processing folder: {folder}")
+        total_size = log_deletion_summary(summary, logger)
+        if total_size:
+            total_replaimed_space += total_size
+    if total_replaimed_space:
+        logger.info(f"Total reclaimed space: {format_size(total_replaimed_space)}")
 
     print("Done!")
