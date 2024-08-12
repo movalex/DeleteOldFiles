@@ -13,7 +13,7 @@ FOLDERS = [
 LOG_FILE = "//Capture2/shared/logs/delete_converted.log"
 
 
-def setup_logger(name, log_file, level=logging.INFO):
+def setup_logger(name, log_file, level=logging.DEBUG):
     """
     Function to set up a logger with the given name, log file, and logging level.
     """
@@ -91,7 +91,7 @@ def delete_files(folder, days=90):
             try:
                 file_size = file.stat().st_size
                 total_size_purged += file_size
-                # file.unlink()  # delete files
+                file.unlink()  # delete files
                 deleted_files.append((file.name, file_size))
                 count += 1
             except Exception as e:
@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
     for folder in FOLDERS:
         summary = delete_files(folder)
-        logger.debug(f"Processing folder: {folder}")
+        logger.info(f"Processing folder: {folder}")
         total_size = log_deletion_summary(summary, logger)
         if total_size:
             total_reclaimed_space += total_size
