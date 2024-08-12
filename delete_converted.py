@@ -9,7 +9,7 @@ FOLDERS = [
     # "//Capture2/shared/NAEFIR/processed",
 ]
 
-LOG_FILE = "//Capture2/shared/logs/delete_converted_test.log"
+LOG_FILE = "//Capture2/shared/logs/delete_converted.log"
 
 
 def setup_logger(name, log_file, level=logging.INFO):
@@ -18,7 +18,8 @@ def setup_logger(name, log_file, level=logging.INFO):
     """
     logger = logging.getLogger(name)
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     file_handler = logging.FileHandler(log_file)
@@ -46,7 +47,7 @@ def format_size(size_bytes):
         return f"{size_gb:.2f} GB"
 
 
-def delete_files(folder, days=80):
+def delete_files(folder, days=90):
     """
     Get files modified more than `days` ago,
     delete and log to file.
@@ -69,7 +70,7 @@ def delete_files(folder, days=80):
             try:
                 file_size = file.stat().st_size
                 total_size_purged += file_size
-                # file.unlink()  # delete diles
+                file.unlink()  # delete files
                 deleted_files.append((file.name, file_size))
                 count += 1
             except Exception as e:
@@ -94,12 +95,12 @@ def log_deletion_summary(summary, logger):
 
     if "error" in summary:
         logger.error(f"Critical error encountered: {summary['error']}")
-        return 0
+        return
 
-    current_folder = summary["folder_name"]
     for file_name, file_size in summary["deleted_files"]:
         logger.info(f"Deleted {file_name}, size: {format_size(file_size)}")
 
+    current_folder = summary["folder_name"]
     logger.info(
         f"Total number of files deleted from {current_folder}: {summary['count']}"
     )
@@ -115,15 +116,15 @@ def log_deletion_summary(summary, logger):
 
 if __name__ == "__main__":
     logger = setup_logger("fileDeleter", LOG_FILE)
-    total_replaimed_space = 0
+    total_reclaimed_space = 0
 
     for folder in FOLDERS:
         summary = delete_files(folder)
         logger.info(f"Processing folder: {folder}")
         total_size = log_deletion_summary(summary, logger)
         if total_size:
-            total_replaimed_space += total_size
-    if total_replaimed_space:
-        logger.info(f"Total reclaimed space: {format_size(total_replaimed_space)}")
+            total_reclaimed_space += total_size
+    if total_reclaimed_space:
+        logger.info(f"Total reclaimed space: {format_size(total_reclaimed_space)}")
 
     print("Done!")
