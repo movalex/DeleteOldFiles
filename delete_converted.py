@@ -12,23 +12,53 @@ FOLDERS = [
 LOG_PATH = "//Capture2/shared/logs"
 
 
+def format_size(size_bytes):
+    """
+    Returns the size in MB if less than 1 GB, otherwise in GB.
+    """
+    if size_bytes < 1024**3:  # Less than 1 GB
+        size_mb = size_bytes / (1024 * 1024)
+        return f"{size_mb:.2f} MB"
+    else:  # 1 GB or more
+        size_gb = size_bytes / (1024 * 1024 * 1024)
+        return f"{size_gb:.2f} GB"
+
+
 def delete_files(folder, days=90):
     """
-    get files modified more than `days` ago
-    delete and log to file
+    Get files modified more than `days` ago,
+    delete and log to file.
     """
     folder = Path(folder)
     count = 0
+    total_size_purged = 0
+
+    if not folder.is_dir():
+        logger.error(f"The folder {folder} does not exist or is not a directory.")
+        return
+
     for file in folder.glob("*"):
-        if not file.is_dir():
-            file_modified = datetime.fromtimestamp(file.lstat().st_mtime)
-            if datetime.now() - file_modified > timedelta(days):
-                count += 1
-                try:
-                    file.unlink()
-                    logger.info(f"deleted {file.name} from {folder}")
-                except Exception as e:
-                    logger.info(f"Could not delete file! Error message:\n{e}")
+        if file.is_dir():
+            continue
+        file_modified = datetime.fromtimestamp(file.lstat().st_mtime)
+        if datetime.now() - file_modified > timedelta(days=days):
+            count += 1
+            try:
+                file_size = file.stat().st_size
+                total_size_purged += file_size
+                # file.unlink()
+                print(
+                    f"Deleted {file.name} from {folder}, size: {file_size / (1024**2):.2f} MB"
+                )
+                # logger.info(f"Deleted {file.name} from {folder}, size: {file_size} bytes")
+            except Exception as e:
+                logger.error(f"Could not delete file {file.name}! Error message:\n{e}")
+
+    formatted_total_size = format_size(total_size_purged)
+    logger.info(f"Total number of files deleted: {count}")
+    logger.info(f"Total size of files deleted: {formatted_total_size}")
+    print(f"Total number of files deleted: {count}")
+    print(f"Total size of files deleted: {formatted_total_size}")
 
 
 def setup_logger(log_path):
