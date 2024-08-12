@@ -9,7 +9,29 @@ FOLDERS = [
     "//Capture2/shared/NAEFIR/processed",
 ]
 
-LOG_PATH = "//Capture2/shared/logs"
+LOG_FILE = "//Capture2/shared/logs/delete_converted.log"
+
+
+def setup_logger(name, log_file, level=logging.ERROR):
+    """
+    Function to set up a logger with the given name, log file, and logging level.
+    """
+    logger = logging.getLogger(name)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logger.setLevel(level)
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+
+    return logger
 
 
 def format_size(size_bytes):
@@ -45,39 +67,25 @@ def delete_files(folder, days=90):
             count += 1
             try:
                 file_size = file.stat().st_size
+                file_size_formatted = format_size(file_size)
                 total_size_purged += file_size
                 # file.unlink()
-                print(
-                    f"Deleted {file.name} from {folder}, size: {file_size / (1024**2):.2f} MB"
-                )
-                # logger.info(f"Deleted {file.name} from {folder}, size: {file_size} bytes")
+                print(f"Deleted {file.name} from {folder}, {file_size_formatted}")
+                logger.info(f"Deleted {file.name} from {folder}, {file_size} bytes")
             except Exception as e:
                 logger.error(f"Could not delete file {file.name}! Error message:\n{e}")
 
+    if count == 0:
+        logger.debug("No files to delete")
+        return
+
     formatted_total_size = format_size(total_size_purged)
-    logger.info(f"Total number of files deleted: {count}")
-    logger.info(f"Total size of files deleted: {formatted_total_size}")
-    print(f"Total number of files deleted: {count}")
-    print(f"Total size of files deleted: {formatted_total_size}")
-
-
-def setup_logger(log_path):
-    logger_folder = Path(log_path)
-    logger_folder.mkdir(parents=True, exist_ok=True)
-    logger = logging.getLogger("fileDeleter")
-    logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(Path(logger_folder, "delete_converted.log"), "a", "utf-8")
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(message)s", "%Y-%m-%d %H:%M:%S"
-    )
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-    fh.close()
-    return logger
+    logger.info(f"Total number of files deleted in {folder.name}: {count}")
+    logger.info(f"Total size of files deleted in {folder.name}: {formatted_total_size}")
 
 
 if __name__ == "__main__":
-    logger = setup_logger(LOG_PATH)
+    logger = setup_logger("fileDeleter", LOG_FILE)
     for folder in FOLDERS:
         delete_files(folder)
 
