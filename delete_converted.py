@@ -1,7 +1,6 @@
+import logging
 from pathlib import Path
 from datetime import datetime, timedelta
-import os
-import logging
 
 FOLDERS = [
     "//Capture2/convert/processed",
@@ -9,7 +8,8 @@ FOLDERS = [
     "//CAPTURE2/shared/MP4",
     "//Capture2/shared/NAEFIR/processed",
 ]
-# FOLDER = "."
+
+LOG_PATH = "//Capture2/shared/logs"
 
 
 def delete_files(folder, days=90):
@@ -31,8 +31,8 @@ def delete_files(folder, days=90):
                     logger.info(f"Could not delete file! Error message:\n{e}")
 
 
-def setup_logger():
-    logger_folder = Path(r"\\Capture2\shared\logs")
+def setup_logger(log_path):
+    logger_folder = Path(log_path)
     logger_folder.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger("fileDeleter")
     logger.setLevel(logging.INFO)
@@ -47,7 +47,7 @@ def setup_logger():
 
 
 if __name__ == "__main__":
-    logger = setup_logger()
+    logger = setup_logger(LOG_PATH)
     for folder in FOLDERS:
         delete_files(folder)
 
