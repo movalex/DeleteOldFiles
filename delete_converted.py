@@ -1,4 +1,5 @@
 import logging
+import psutil
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -47,6 +48,20 @@ def format_size(size_bytes):
         return f"{size_gb:.2f} GB"
 
 
+def is_file_opened(file_path):
+    """
+    Check if the file is currently opened by any process.
+    """
+    for proc in psutil.process_iter(["pid", "name"]):
+        try:
+            for item in proc.open_files():
+                if item.path == file_path:
+                    return True
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            continue
+    return False
+
+
 def delete_files(folder, days=90):
     """
     Get files modified more than `days` ago,
@@ -67,10 +82,16 @@ def delete_files(folder, days=90):
             continue
         file_modified = datetime.fromtimestamp(file.lstat().st_mtime)
         if datetime.now() - file_modified > timedelta(days=days):
+            # potentially slow, currently disabled
+            # if is_file_opened(str(file)):
+            #     logger.info(
+            #         f"Skipping deletion of {file.name} as it is currently opened by another application."
+            #     )
+            #     continue
             try:
                 file_size = file.stat().st_size
                 total_size_purged += file_size
-                file.unlink()  # delete files
+                # file.unlink()  # delete files
                 deleted_files.append((file.name, file_size))
                 count += 1
             except Exception as e:
@@ -97,8 +118,11 @@ def log_deletion_summary(summary, logger):
         logger.error(f"Critical error encountered: {summary['error']}")
         return
 
+    if not summary["count"]:
+        return
+
     for file_name, file_size in summary["deleted_files"]:
-        logger.info(f"Deleted {file_name}, size: {format_size(file_size)}")
+        logger.debug(f"Deleted {file_name}, size: {format_size(file_size)}")
 
     current_folder = summary["folder_name"]
     logger.info(
@@ -120,7 +144,7 @@ if __name__ == "__main__":
 
     for folder in FOLDERS:
         summary = delete_files(folder)
-        logger.info(f"Processing folder: {folder}")
+        logger.debug(f"Processing folder: {folder}")
         total_size = log_deletion_summary(summary, logger)
         if total_size:
             total_reclaimed_space += total_size
